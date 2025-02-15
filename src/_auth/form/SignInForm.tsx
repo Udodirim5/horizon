@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 
 import { Button } from "@/components/ui/button";
-import Loader from "@/components/ui/shared/Loader";
+import Loader from "@/components/shared/Loader";
 import { useSignInAccount } from "@/lib/react-query/queriesAndMutations";
 import { useUserContext } from "@/contexts/AuthContext";
 import { SigninValidation } from "@/lib/validation";
@@ -38,14 +38,12 @@ const SignInForm = () => {
 
   // 2. Define a submit handler.
   async function onSubmit(values: z.infer<typeof SigninValidation>) {
-    console.log("we're here");
-    
+
     // sign our user in to a session.
     const session = await signInAccount({
       email: values.email,
       password: values.password,
     });
-    console.log("session:", session);
 
     if (!session) {
       toast({
@@ -58,7 +56,6 @@ const SignInForm = () => {
     }
 
     const isLoggedIn = await checkAuthUser();
-    console.log("isLoggedIn:", isLoggedIn);
 
     if (isLoggedIn) {
       form.reset();

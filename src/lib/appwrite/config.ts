@@ -9,7 +9,6 @@ export const appwriteConfig = {
   postCollectionId: import.meta.env.VITE_APPWRITE_POST_COLLECTION_ID,
   savesCollectionId: import.meta.env.VITE_APPWRITE_SAVES_COLLECTION_ID,
 };
-console.log("Appwrite Config:", appwriteConfig);
 
 export const client = new Client();
 
@@ -20,3 +19,20 @@ export const account = new Account(client);
 export const databases = new Databases(client);
 export const storage = new Storage(client);
 export const avatars = new Avatars(client);
+
+export const initializeJWT = async () => {
+  try {
+    const session = await account.get();
+
+    if (!session || session.$id === undefined) {
+      console.warn("No active session found. A new one might be needed.");
+      return;
+    }
+
+    const jwt = await account.createJWT();
+    client.setJWT(jwt.jwt);
+    console.log("JWT set successfully.");
+  } catch (error) {
+    console.error("Failed to set JWT:", error);
+  }
+};

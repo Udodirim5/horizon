@@ -1,11 +1,11 @@
-import { INewUser } from "@/types";
+import { INewPost, INewUser } from "@/types";
 import { ID, Query, AppwriteException } from "appwrite";
-import { account, appwriteConfig, avatars, databases } from "./config";
+import { account, appwriteConfig, avatars, databases, initializeJWT, storage } from "./config";
 
 export async function createUserAccount(user: INewUser) {
   try {
     const newAccount = await account.create(
-      ID.unique(), 
+      ID.unique(),
       user.email,
       user.password,
       user.name
@@ -62,12 +62,16 @@ export async function signInAccount(user: { email: string; password: string }) {
       await account.deleteSession("current"); // Logout before proceeding
     }
   } catch (error) {
-    console.error("Error logging out existing session:", error);
+    console.log("Error logging out existing session:", error);
   }
 
   // Now create a new session
   try {
-    const session = await account.createEmailPasswordSession(user.email, user.password);
+    const session = await account.createEmailPasswordSession(
+      user.email,
+      user.password
+    );
+    await initializeJWT(); // Set JWT after login
 
     return session;
   } catch (error) {
@@ -76,12 +80,10 @@ export async function signInAccount(user: { email: string; password: string }) {
   }
 }
 
-
 export async function getCurrentUser() {
   try {
     // Try fetching the current logged-in account
     const currentAccount = await account.get();
-    console.log("currentAccount:", currentAccount);
 
     // Fetch user details from the database
     const currentUser = await databases.listDocuments(
@@ -114,6 +116,112 @@ export async function signOutAccount() {
   } catch (error) {
     console.error("Error signing out:", error);
     return null;
+  }
+}
+
+export async function createPost(post: INewPost) {
+  try {
+    // Upload file to Appwrite storage
+    const uploadedFile = await uploadFile(post.file[0]);
+    if (!uploadedFile) throw new Error("File upload failed");
+
+    // Get file URL
+    const fileUrl = getFilePreview(uploadedFile.$id);
+    if (!fileUrl) {
+      await deleteFile(uploadedFile.$id);
+      throw new Error("Failed to generate file URL");
+    }
+
+    // Convert tags into an array
+    const tags = post.tags?.replace(/ /g, "").split(",") || [];
+
+    // Create post in database
+    const newPost = await databases.createDocument(
+      appwriteConfig.databaseId,
+      appwriteConfig.postCollectionId,
+      ID.unique(),
+      {
+        creator: post.userId,
+        caption: post.caption,
+        imageUrl: fileUrl,
+        imageId: uploadedFile.$id,
+        location: post.location,
+        tags: tags,
+      }
+    );
+
+    if (!newPost) {
+      await deleteFile(uploadedFile.$id);
+      throw new Error("Post creation failed");
+    }
+
+    return newPost;
+  } catch (error) {
+    console.error("Error creating post:", error);
+    return null;
+  }
+}
+
+// ============================== UPLOAD FILE
+export async function uploadFile(file: File) {
+  try {
+    const uploadedFile = await storage.createFile(
+      appwriteConfig.storageId,
+      ID.unique(),
+      file
+    );
+
+    return uploadedFile;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+// ============================== GET FILE URL
+export function getFilePreview(fileId: string) {
+  try {
+    const fileUrl = storage.getFilePreview(
+      appwriteConfig.storageId,
+      fileId,
+      2000,
+      2000,
+      "top",
+      100
+    );
+
+    if (!fileUrl) throw Error;
+
+    return fileUrl;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+// ============================== DELETE FILE
+export async function deleteFile(fileId: string) {
+  try {
+    await storage.deleteFile(appwriteConfig.storageId, fileId);
+
+    return { status: "ok" };
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+// ============================== GET POPULAR POSTS (BY HIGHEST LIKE COUNT)
+export async function getRecentPosts() {
+  try {
+    const posts = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.postCollectionId,
+      [Query.orderDesc("$createdAt"), Query.limit(20)]
+    );
+
+    if (!posts) throw Error;
+
+    return posts;
+  } catch (error) {
+    console.log(error);
   }
 }
 

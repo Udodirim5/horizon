@@ -3,6 +3,7 @@ import { useUserContext } from "@/contexts/AuthContext";
 import { useSignOutAccount } from "@/lib/react-query/queriesAndMutations";
 import { INavLink } from "@/types";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { Button } from "../ui/button";
 
 const LeftSideBar = () => {
   const { mutate: signOut, isSuccess } = useSignOutAccount();
@@ -41,7 +42,7 @@ const LeftSideBar = () => {
             return (
               <li
                 key={link.label}
-                className={`leftsidebar-link ${
+                className={`leftsidebar-link group ${
                   isActive ? "bg-primary-500" : ""
                 }`}
               >
@@ -52,7 +53,9 @@ const LeftSideBar = () => {
                   <img
                     src={link.imgURL}
                     alt={link.label}
-                    className="group-hover:invert-white"
+                    className={`group-hover:invert-white ${
+                      isActive && "invert-white"
+                    }`}
                   />
                   {link.label}
                 </NavLink>
@@ -61,6 +64,15 @@ const LeftSideBar = () => {
           })}
         </ul>
       </div>
+
+      <Button
+        variant="ghost"
+        className="shad-button_ghost"
+        onClick={() => signOut()}
+      >
+        <img src="/assets/icons/logout.svg" alt="logout" />
+        <p className="small-medium lg:base-medium">Logout</p>
+      </Button>
     </nav>
   );
 };

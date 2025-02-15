@@ -36,7 +36,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const currentAccount = await getCurrentUser();
 
       if (!currentAccount) {
-        console.log("User is not logged in (from Auth Context).");
         setIsAuthenticated(false);
         return false;
       }
