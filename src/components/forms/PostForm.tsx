@@ -16,18 +16,26 @@ import { Textarea } from "../ui/textarea";
 import FileUploader from "../shared/FileUploader";
 import { PostValidation } from "@/lib/validation";
 import { Models } from "appwrite";
-import { useCreatePost } from "@/lib/react-query/queriesAndMutations";
+import {
+  useCreatePost,
+  useUpdatePost,
+} from "@/lib/react-query/queriesAndMutations";
 import { useUserContext } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import Loader from "../shared/Loader";
 
 type PostFormPromps = {
   post?: Models.Document;
+  action: "Create" | "Update";
 };
 
-const PostForm = ({ post }: PostFormPromps) => {
-  const { mutateAsync: createPost, isPending: isLoadeingCreatePost } =
+const PostForm = ({ post, action }: PostFormPromps) => {
+  const { mutateAsync: createPost, isPending: isLoadingCreatePost } =
     useCreatePost();
+  const { mutateAsync: updatePost, isPending: isLoadingUpdatePost } =
+    useUpdatePost();
+
   const { user } = useUserContext();
   const navigate = useNavigate();
 
@@ -44,6 +52,26 @@ const PostForm = ({ post }: PostFormPromps) => {
 
   // 2. Define a submit handler.
   async function onSubmit(values: z.infer<typeof PostValidation>) {
+    if (post && action === "Update") {
+      const updatedPost = await updatePost({
+        ...values,
+        postId: post.$id,
+        imageId: post?.imageId,
+        imageUrl: post?.imageUrl,
+      });
+
+      if (!updatedPost) {
+        return toast({
+          title: "Error updating post",
+          description: "An error occurred while updating your post.",
+        });
+      }
+
+      navigate(`/posts/${post.$id}`);
+      return; // 🛑 Prevents createPost from running!
+
+    }
+
     const newPost = await createPost({
       ...values,
       userId: user.id,
@@ -137,8 +165,10 @@ const PostForm = ({ post }: PostFormPromps) => {
           <Button
             type="submit"
             className="shad-button_primary whitespace-nowrap"
+            disabled={isLoadingCreatePost || isLoadingUpdatePost}
           >
-            Submit
+            {isLoadingCreatePost || (isLoadingUpdatePost && <Loader />)}
+            {action} Post
           </Button>
         </div>
       </form>
