@@ -31,7 +31,7 @@ const LeftSideBar = () => {
           />
           <div className="flex flex-col">
             <p className="body-bold">{user.name}</p>
-            <p className="small-regular text-light-3">@{user.username}</p>
+            <p className="small-regular text-light-3">@{user.username || "Username"}</p>
           </div>
         </Link>
 
