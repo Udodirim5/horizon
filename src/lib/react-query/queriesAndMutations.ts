@@ -11,6 +11,7 @@ import {
   deleteSavedPost,
   getCurrentUser,
   getRecentPosts,
+  getInfinitePosts,
   likePost,
   savePost,
   signInAccount,
@@ -18,6 +19,7 @@ import {
   signOutAccount,
   updatePost,
   deletePost,
+  searchPosts,
 } from "../appwrite/api";
 import { INewPost, INewUser, IUpdatePost } from "@/types";
 import { useUserContext } from "@/contexts/AuthContext";
@@ -208,3 +210,22 @@ export const useDeletePost = () => {
     },
   });
 };
+
+export const useGetPosts = () => {
+  return useInfiniteQuery({
+    queryKey: [QUERY_KEYS.GET_INFINITE_POSTS],
+    queryFn: getInfinitePosts,
+    getNextPageParam: (lastPage) => {
+      if (!lastPage || !lastPage.documents.length) return null;
+      return lastPage.documents[lastPage.documents.length - 1].$id; 
+    },
+  });
+};
+
+export const useSearchPosts = (searchTerm: string) => {
+  return useQuery({
+    queryKey: [QUERY_KEYS.SEARCH_POSTS, searchTerm],
+    queryFn: () => searchPosts(searchTerm),
+    enabled: !!searchTerm,
+  })
+}
